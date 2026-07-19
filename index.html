@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html>
 
@@ -54,60 +56,97 @@
 
     <script>
 
-        const SPREADSHEET_ID = "1ORvWlu4bHYOi-UR51puZMrShl8XnYr6TmJLxQ_GilDU";
-        const SHEET_NAME = "EOD Report";
+        const WEBAPP = "https://script.google.com/macros/s/AKfycbwNOtwqncfVEqmdEfKQP_9Dx3ijAdeXof9j5JiD-ajOtHRbhWFjMJkiCH5r70FZf4OuVA/exec";
 
-        function doPost(e) {
+        function send() {
 
-            try {
+            let report = document.getElementById("report").value.trim();
 
-                const data = JSON.parse(e.postData.contents);
+            if (report == "") {
+                alert("Please paste EOD report.");
+                return;
+            }
 
-                appendEOD(data);
+            let data = parseReport(report);
 
-                return ContentService
-                    .createTextOutput(JSON.stringify({
-                        success: true,
-                        message: "EOD Added Successfully"
-                    }))
-                    .setMimeType(ContentService.MimeType.JSON);
+            fetch(WEBAPP, {
+                method: "POST",
+                body: JSON.stringify(data)
+            })
+                .then(r => r.json())
+                .then(res => {
 
-            } catch (err) {
+                    document.getElementById("status").innerHTML = "✅ " + res.message;
 
-                return ContentService
-                    .createTextOutput(JSON.stringify({
-                        success: false,
-                        message: err.toString()
-                    }))
-                    .setMimeType(ContentService.MimeType.JSON);
+                    document.getElementById("report").value = "";
+
+                })
+                .catch(err => {
+
+                    document.getElementById("status").innerHTML = "❌ " + err;
+
+                });
+
+        }
+
+
+        function parseReport(text) {
+
+            const lines = text.split("\n").map(x => x.trim());
+
+            let date = "";
+            let projects = [];
+
+            let current = null;
+
+            for (let i = 0; i < lines.length; i++) {
+
+                let line = lines[i];
+
+                if (line.startsWith("Date")) {
+                    date = line.split("=")[1].trim();
+                }
+
+                if (line.startsWith("Project Name")) {
+
+                    if (current) {
+                        projects.push(current);
+                    }
+
+                    current = {
+                        project: line.split("-")[1].trim(),
+                        report: ""
+                    };
+
+                    continue;
+
+                }
+
+                if (current) {
+
+                    if (
+                        line.startsWith("Time Estimate") ||
+                        line.startsWith("Task Assigned") ||
+                        line == ""
+                    ) {
+                        continue;
+                    }
+
+                    current.report += line + "\n";
+
+                }
 
             }
 
-        }
+            if (current) {
+                projects.push(current);
+            }
 
-        function appendEOD(data) {
+            return {
+                date: date,
+                projects: projects
+            };
 
-            const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-            const sheet = ss.getSheetByName(SHEET_NAME);
-
-            let row = sheet.getLastRow() + 1;
-
-            data.projects.forEach(function (project, index) {
-
-                sheet.getRange(row, 1).setValue(index == 0 ? data.date : "");
-                sheet.getRange(row, 2).setValue(project.project);
-                sheet.getRange(row, 3).setValue(project.report);
-
-                row++;
-
-            });
-
-        }
-
-        function doGet() {
-            return ContentService
-                .createTextOutput("EOD API Running")
-                .setMimeType(ContentService.MimeType.TEXT);
         }
 
     </script>
@@ -115,3 +154,4 @@
 </body>
 
 </html>
+
