@@ -124,11 +124,17 @@
 
                 if (current) {
 
-                    if (
-                        line.startsWith("Time Estimate") ||
-                        line.startsWith("Task Assigned") ||
-                        line == ""
-                    ) {
+                    if (line.startsWith("Time Estimate")) {
+                        current.report += "Time Estimate: " + line.split("-")[1].trim() + "\n";
+                        continue;
+                    }
+                    
+                    if (line.startsWith("Task Assigned")) {
+                        current.report += "Task Assigned: " + line.split("-")[1].trim() + "\n\n";
+                        continue;
+                    }
+                    
+                    if (line == "") {
                         continue;
                     }
 
